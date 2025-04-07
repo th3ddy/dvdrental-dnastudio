@@ -2,19 +2,34 @@
 --Tampilkan status pengembalian film dan total jumlah film.Berapa banyak film sewaan yang dikembalikan terlambat, lebih awal dan tepat waktu?
 
 
-with rentalstatus as(
-select r.rental_id,
-r.inventory_id ,
-r.rental_date ,
-r.return_date,
-extract(day from (return_date - rental_date)) as selisih_hari,
-case when r.return_date is null then 'a. Belum Dikembalikan'
-when extract(day from (return_date - rental_date)) = 0 then 'b. Pengembalian Tepat Waktu'
-when extract(day from (return_date - rental_date)) < 0 then 'c. Pengembalian Lebih Awal'
-when extract(day from (return_date - rental_date)) > 0 then 'd. Pengembalian Terlambat'
-end as Status_Pengembalian
-from rental r
+WITH rentalstatus AS (
+    SELECT 
+        r.rental_id,
+        r.inventory_id,
+        r.rental_date,
+        r.return_date,
+        EXTRACT(DAY FROM (return_date - rental_date)) AS selisih_hari,
+        CASE 
+            WHEN r.return_date IS NULL THEN 'a. Belum Dikembalikan'
+            WHEN EXTRACT(DAY FROM (return_date - rental_date)) = 0 THEN 'b. Pengembalian Tepat Waktu'
+            WHEN EXTRACT(DAY FROM (return_date - rental_date)) < 0 THEN 'c. Pengembalian Lebih Awal'
+            WHEN EXTRACT(DAY FROM (return_date - rental_date)) > 0 THEN 'd. Pengembalian Terlambat'
+        END AS status_pengembalian
+    FROM rental r
+),
+status_categories AS (
+    SELECT status
+    FROM (VALUES 
+        ('a. Belum Dikembalikan'), 
+        ('b. Pengembalian Tepat Waktu'), 
+        ('c. Pengembalian Lebih Awal'), 
+        ('d. Pengembalian Terlambat')
+    ) AS categories(status)
 )
-select Status_Pengembalian, count(*) as jumlah_film from rentalstatus rs
-group by Status_Pengembalian
-order by Status_Pengembalian
+SELECT 
+    sc.status AS status_pengembalian,
+    COALESCE(COUNT(rs.rental_id), 0) AS jumlah_film
+FROM status_categories sc
+LEFT JOIN rentalstatus rs ON sc.status = rs.status_pengembalian
+GROUP BY sc.status
+ORDER BY sc.status;
